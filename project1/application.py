@@ -2,25 +2,33 @@ import os
 
 from flask import Flask, session, render_template, request, redirect, jsonify, url_for
 from flask_session import Session
-from sqlalchemy import create_engine
+
+from sqlalchemy import create_engine, text
 from sqlalchemy.orm import scoped_session, sessionmaker
+
+from werkzeug.exceptions import default_exceptions
+from werkzeug.security import check_password_hash, generate_password_hash
 
 from helpers import apology, login_required
 
 app = Flask(__name__)
 
 # Check for environment variable
-#if not os.getenv("DATABASE_URL"):
-#    raise RuntimeError("DATABASE_URL is not set")
+if not os.getenv("DATABASE_URL"):
+    raise RuntimeError("DATABASE_URL is not set")
 
 # Configure session to use filesystem
 app.config["SESSION_PERMANENT"] = False
 app.config["SESSION_TYPE"] = "filesystem"
+app.config["CACHE_TYPE"] = "null"
+
+
 Session(app)
 
+
 # Set up database
-#engine = create_engine(os.getenv("DATABASE_URL"))
-#db = scoped_session(sessionmaker(bind=engine))
+engine = create_engine(os.getenv("DATABASE_URL"))
+db = scoped_session(sessionmaker(bind=engine))
 
 
 @app.route("/")
@@ -77,22 +85,39 @@ def register():
             return apology("Username is not submitted", 403)
 
         # Ensure password is submitted
-        if not request.form.get("password"):
+        elif not request.form.get("password"):
             return apology("Password is not submitted", 403)
 
         # Ensure confirm password and password are same
-        if not request.form.get("conf_password") == request.form.get("password"):
+        elif not request.form.get("conf_password") == request.form.get("password"):
             return apology("Password doesn't match", 403)
 
-        # Hash the password
+        # Hashing password before saving to DB (For password protection)
+        hash_password = generate_password_hash(request.form.get("password"))
+        user_name = request.form.get("username")
 
-        # Check if username is not already existed in db, if exists error out
+        # Insert new user into DB
+        try:
+            result = db.execute("INSERT INTO users (name, hash) VALUES (:user, :hash) RETURNING id, name",
+                            {'user' : user_name, 'hash' :  hash_password})
+        except:
+            db.rollback()
+            return apology("User already registered", 403)
+        else:
+            db.commit()
 
-        # Add a new entry to db
+        values = []
+        for value in result:
+            values.append(value)
 
-        # store user_id in session
+        # print(values[0][1])
+        # print(values[0])
 
-        return render_template("building.html")
+        # Remember which user has registered in
+        session["user_id"] = values[0][0]
+
+        # Redirect user to home page
+        return redirect("/")
 
     # User reached the route via GET (as by clicking on a link or redirect)
     else:
