@@ -1,3 +1,21 @@
+.active-cyan-2 input[type=text]:focus:not([readonly]) {
+    border-bottom: 1px solid #4dd0e1;
+    box-shadow: 0 1px 0 0 #4dd0e1;
+}
+
+.active-cyan input[type=text] {
+    border-bottom: 1px solid #4dd0e1;
+    box-shadow: 0 1px 0 0 #4dd0e1;
+}
+
+.search input[type="text"], textarea {
+    outline: none;
+    box-shadow:none !important;
+    border:none;
+    border-bottom:1px solid #ccc;
+}
+
+
 nav .navbar-brand
 {
     /* size for brand */
@@ -45,3 +63,5 @@ main img
     /* constrain images on small screens */
     max-width: 100%;
 }
+
+

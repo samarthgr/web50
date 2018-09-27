@@ -3,7 +3,7 @@ import os
 from flask import Flask, session, render_template, request, redirect, jsonify, url_for
 from flask_session import Session
 
-from sqlalchemy import create_engine, text
+from sqlalchemy import create_engine
 from sqlalchemy.orm import scoped_session, sessionmaker
 
 from werkzeug.exceptions import default_exceptions
@@ -32,8 +32,9 @@ db = scoped_session(sessionmaker(bind=engine))
 
 
 @app.route("/")
+@login_required
 def index():
-    return render_template("building.html")
+    return render_template("index.html")
 
 
 @app.route("/login", methods=["GET", "POST"])
@@ -54,16 +55,30 @@ def login():
         if not request.form.get("password"):
             return apology("password is not submitted", 403)
 
-        # Hash the password
-            # TODO
+        username = request.form.get("username")
 
         # Query database with name and hashed password
-            # TODO
+        try:
+            result = db.execute("SELECT * FROM users WHERE name = :name", {"name":username})
+        except:
+            db.rollback()
+            return apology("Database execution error", 500)
 
-        # Add user to session and redirect to homepage if success else error out
-            # TODO
+        # Storing required result from ResultProxy object
+        values = []
+        for value in result:
+            values.append(value)
+        print(values)
 
-        return render_template("building.html")
+        # Check if valid user
+        if len(values) != 1 or not check_password_hash(values[0][2], request.form.get("password")):
+            return apology("Invalid username and/or password", 403)
+
+        # Add user to session
+        session["user_id"] = values[0][0]
+
+        # Redirect user to home page
+        return redirect("/")
 
     # User reached via GET (as by clicking on a link or via redirect)
     else:
@@ -109,11 +124,9 @@ def register():
         values = []
         for value in result:
             values.append(value)
+            # print(values)
 
-        # print(values[0][1])
-        # print(values[0])
-
-        # Remember which user has registered in
+        # Remember the user
         session["user_id"] = values[0][0]
 
         # Redirect user to home page
